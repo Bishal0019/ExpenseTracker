@@ -5,7 +5,6 @@ import { useUser, SignInButton } from "@clerk/nextjs";
 export default function Home() {
   const { isSignedIn, isLoaded, user } = useUser();
 
-  // --- HELPERS ---
   const getCurrentMonthStr = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -18,20 +17,17 @@ export default function Home() {
   };
 
 
-  // --- STATE ---
   const [currentSystemMonth, setCurrentSystemMonth] = useState(getCurrentMonthStr());
   const [initialBalance, setInitialBalance] = useState('0');
   const [transactions, setTransactions] = useState([]);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('expense');
-  const [date, setDate] = useState(getTodayStr()); // ✅ always today by default
+  const [date, setDate] = useState(getTodayStr()); 
 
-  // ✅ Freeze states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  // ✅ Fetch transactions safely (always fresh)
   const fetchTransactions = async () => {
     try {
       const tRes = await fetch('/api/transactions', { cache: "no-store" });
@@ -42,7 +38,6 @@ export default function Home() {
     }
   };
 
-  // ✅ Fetch summary for current month (initialBalance)
   const fetchSummary = async (month) => {
     try {
       const sRes = await fetch(`/api/summary?month=${month}`, { cache: "no-store" });
@@ -59,7 +54,6 @@ export default function Home() {
     }
   };
 
-  // --- DATABASE SYNC: INITIAL LOAD ---
   useEffect(() => {
     if (!isSignedIn) return;
 
@@ -72,14 +66,12 @@ export default function Home() {
         fetchSummary(month),
       ]);
 
-      // ✅ Ensure date defaults to today after login/refresh
       setDate(getTodayStr());
     };
 
     fetchData();
   }, [isSignedIn]);
 
-  // --- AUTO-RESET LOGIC (NO browser alert) ---
   useEffect(() => {
     if (!isSignedIn) return;
 
@@ -88,14 +80,11 @@ export default function Home() {
       if (nowMonth !== currentSystemMonth) {
         setCurrentSystemMonth(nowMonth);
 
-        // ✅ Reset UI state
         setTransactions([]);
         setInitialBalance('0');
 
-        // ✅ Reset date to today
         setDate(getTodayStr());
 
-        // ✅ refetch from DB for new month
         await Promise.all([
           fetchTransactions(),
           fetchSummary(nowMonth),
@@ -106,11 +95,9 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [currentSystemMonth, isSignedIn]);
 
-  // --- HANDLERS ---
   const handleBalanceChange = async (e) => {
     const rawValue = e.target.value;
 
-    // ✅ allow typing empty while editing but store safely
     setInitialBalance(rawValue);
 
     const numericVal = Number(rawValue);
@@ -154,22 +141,18 @@ export default function Home() {
         body: JSON.stringify(newEntry),
       });
 
-      // ✅ silent fail (no alert)
       if (!res.ok) {
         console.error("Failed to add transaction:", await res.text());
         return;
       }
 
-      // ✅ Always re-fetch after add
       await fetchTransactions();
       await fetchSummary(currentSystemMonth);
 
-      // ✅ Reset fields
       setDescription('');
       setAmount('');
       setType('expense');
 
-      // ✅ Keep date as TODAY by default after add
       setDate(getTodayStr());
 
     } catch (err) {
@@ -194,7 +177,6 @@ export default function Home() {
         return;
       }
 
-      // ✅ refresh properly after delete
       await fetchTransactions();
       await fetchSummary(currentSystemMonth);
 
@@ -205,7 +187,6 @@ export default function Home() {
     }
   };
 
-  // --- CALCULATIONS ---
   const monthlyTransactions = transactions.filter(t => t.date?.startsWith(currentSystemMonth));
 
   const totalExpenses = monthlyTransactions
