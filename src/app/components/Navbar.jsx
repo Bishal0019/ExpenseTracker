@@ -7,37 +7,37 @@ import { SignInButton, SignedIn, SignedOut, UserButton, useClerk } from '@clerk/
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
-  const { signOut } = useClerk() // Get the actual signOut function from Clerk
+  const { signOut } = useClerk()
 
   const toggleMenu = () => setIsOpen(!isOpen)
 
   const handleSignOut = async () => {
-    await signOut(() => router.push('/')) // Logs out then sends user to home
+    await signOut(() => router.push('/'))
   }
 
   return (
     <>
-      <nav className='w-full h-32 flex items-center justify-center relative px-10 border-b border-gray-50 bg-white z-30'>
-        {/* Logo */}
+      <nav className='w-full h-24 md:h-32 flex items-center justify-between px-5 md:px-10 border-b border-gray-100 bg-white sticky top-0 z-30'>
+        {/* Logo - Stays Left */}
         <h1 
           onClick={() => router.push('/')} 
-          className='cursor-pointer text-4xl font-bold text-gray-800 select-none'
+          className='cursor-pointer text-2xl md:text-4xl font-bold text-gray-800 select-none flex-shrink-0'
         >
           <span>Expense</span><span className='text-amber-500'>Tracker</span>
         </h1>
 
-        {/* Right Side Actions */}
-        <div className='absolute right-10 top-1/2 -translate-y-1/2 flex items-center gap-4 md:gap-6'>
+        {/* Right Side Actions - Stays Right */}
+        <div className='flex items-center gap-3 md:gap-6'>
           
           <SignedIn>
-            {/* Improved Profile Layout */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 md:gap-4">
+              {/* User Avatar */}
               <div className="border-2 border-amber-500 p-0.5 rounded-full hover:shadow-md transition-all flex items-center justify-center">
                 <UserButton 
                   afterSignOutUrl="/" 
                   appearance={{
                     elements: {
-                      userButtonAvatarBox: "w-10 h-10",
+                      userButtonAvatarBox: "w-8 h-8 md:w-10 md:h-10",
                       userButtonPopoverCard: "shadow-2xl border border-gray-100",
                       userButtonTrigger: "focus:shadow-none focus:outline-none"
                     }
@@ -58,7 +58,7 @@ const Navbar = () => {
 
                 {/* Dropdown Menu */}
                 <div 
-                  className={`absolute right-0 top-full mt-5 w-60 bg-white border border-gray-100 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform origin-top-right z-50 ${
+                  className={`absolute right-0 top-full mt-3 w-56 md:w-60 bg-white border border-gray-100 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 transform origin-top-right z-50 ${
                     isOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'
                   }`}
                 >
@@ -90,7 +90,7 @@ const Navbar = () => {
 
           <SignedOut>
             <SignInButton mode="modal">
-              <button className='bg-amber-500 hover:bg-amber-600 text-white px-8 py-3 rounded-full font-bold transition-all shadow-lg shadow-amber-200 active:scale-95'>
+              <button className='bg-amber-500 hover:bg-amber-600 text-white px-5 md:px-8 py-2.5 md:py-3 rounded-full text-sm md:text-base font-bold transition-all shadow-lg shadow-amber-200 active:scale-95'>
                 Sign In
               </button>
             </SignInButton>
@@ -102,7 +102,7 @@ const Navbar = () => {
       {/* Background Overlay */}
       {isOpen && (
         <div 
-          className='fixed inset-0 bg-white/40 backdrop-blur-sm z-20' 
+          className='fixed inset-0 bg-black/5 backdrop-blur-[2px] z-20' 
           onClick={() => setIsOpen(false)}
         ></div>
       )}
