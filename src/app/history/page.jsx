@@ -53,21 +53,21 @@ export default function HistoryPage() {
                 <h3 className="text-xl font-bold text-gray-700 group-hover:text-amber-600 transition-colors">
                   {new Date(s.monthGroup + "-02").toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </h3>
-                <p className="text-sm text-gray-500 font-medium">Starting Balance: ${s.initialBalance.toLocaleString()}</p>
+                <p className="text-sm text-gray-500 font-medium">Starting Balance: ₹{s.initialBalance.toLocaleString()}</p>
               </div>
               
               <div className="flex gap-10 text-right items-center">
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-wider">Spent</p>
-                  <p className="text-lg font-bold text-red-500">-${s.totalExpenses.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-red-500">-₹{s.totalExpenses.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-wider">Saved</p>
-                  <p className="text-lg font-bold text-green-500">+${s.totalCredits.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-green-500">+₹{s.totalCredits.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-wider">Final</p>
-                  <p className="text-lg font-bold text-gray-800">${s.currentBalance.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-gray-800">₹{s.currentBalance.toLocaleString()}</p>
                 </div>
                 {/* Arrow indicator to show it is clickable */}
                 <div className="text-gray-300 group-hover:text-amber-500 transition-colors pl-4">
