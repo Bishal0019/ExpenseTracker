@@ -1,4 +1,4 @@
-'use client'
+'use client';
 import { useState, useEffect } from 'react';
 import { useUser, SignInButton } from "@clerk/nextjs";
 
@@ -19,10 +19,13 @@ export default function Home() {
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('expense');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // New state for button freezing
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- DATABASE SYNC: INITIAL LOAD ---
   useEffect(() => {
-    if (!isSignedIn) return; // Only fetch if user is signed in
+    if (!isSignedIn) return;
 
     const fetchData = async () => {
       try {
@@ -84,6 +87,8 @@ export default function Home() {
         return;
     }
 
+    setIsSubmitting(true); // Freeze button
+
     const newEntry = { description, amount: parseFloat(amount), type, date };
 
     try {
@@ -96,11 +101,34 @@ export default function Home() {
       if (res.ok) {
         const savedTransaction = await res.json();
         setTransactions([...transactions, savedTransaction]);
+        
+        // Reset fields
         setDescription('');
         setAmount('');
+        setDate(new Date().toISOString().split('T')[0]);
       }
     } catch (err) {
       alert("Error saving transaction to database");
+    } finally {
+      setIsSubmitting(false); // Unfreeze button
+    }
+  };
+
+  const deleteTransaction = async (id) => {
+    if (!confirm("Are you sure you want to delete this record?")) return;
+
+    try {
+      const res = await fetch(`/api/transactions?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setTransactions(transactions.filter(t => (t._id || t.id) !== id));
+      } else {
+        alert("Failed to delete from database");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
     }
   };
 
@@ -114,10 +142,8 @@ export default function Home() {
     .reduce((acc, curr) => acc + curr.amount, 0);
   const currentBalance = Number(initialBalance || 0) + totalCredits - totalExpenses;
 
-  // 1. LOADING STATE (Prevents flickering)
   if (!isLoaded) return null;
 
-  // 2. LANDING VIEW (For Unsigned Users)
   if (!isSignedIn) {
     return (
       <div className="min-h-[75vh] flex items-center justify-center px-6">
@@ -148,7 +174,6 @@ export default function Home() {
     );
   }
 
-  // 3. DASHBOARD VIEW (For Signed In Users)
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
@@ -165,7 +190,6 @@ export default function Home() {
         </span>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 border-l-[6px] border-l-blue-500">
           <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Starting Balance</p>
@@ -192,7 +216,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Input Form */}
       <form onSubmit={addTransaction} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-8 grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
         <div className="md:col-span-1">
           <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Date</label>
@@ -212,10 +235,15 @@ export default function Home() {
             </select>
           </div>
         </div>
-        <button type="submit" className="bg-amber-500 text-white p-3.5 rounded-xl hover:bg-amber-600 transition-all font-bold shadow-lg shadow-amber-100">Add Entry</button>
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          className={`bg-amber-500 text-white p-3.5 rounded-xl transition-all font-bold shadow-lg shadow-amber-100 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-amber-600'}`}
+        >
+          {isSubmitting ? 'Adding...' : 'Add Entry'}
+        </button>
       </form>
 
-      {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
         <table className="w-full text-left">
           <thead className="bg-gray-50/50 border-b border-gray-100">
@@ -223,15 +251,26 @@ export default function Home() {
               <th className="p-5 font-bold text-xs text-gray-400 uppercase tracking-widest">Date</th>
               <th className="p-5 font-bold text-xs text-gray-400 uppercase tracking-widest">Description</th>
               <th className="p-5 font-bold text-xs text-right text-gray-400 uppercase tracking-widest">Amount</th>
+              <th className="p-5 font-bold text-xs text-center text-gray-400 uppercase tracking-widest">Action</th>
             </tr>
           </thead>
           <tbody>
             {monthlyTransactions.map((t) => (
-              <tr key={t._id || t.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
+              <tr key={t._id || t.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors group">
                 <td className="p-5 text-sm text-gray-500 font-medium">{t.date}</td>
                 <td className="p-5 font-bold text-gray-700">{t.description}</td>
                 <td className={`p-5 text-right font-black ${t.type === 'expense' ? 'text-red-500' : 'text-green-600'}`}>
-                  {t.type === 'expense' ? '-' : '+'} ${t.amount.toLocaleString()}
+                  {t.type === 'expense' ? '-' : '+'} ₹{t.amount.toLocaleString()}
+                </td>
+                <td className="p-5 text-center">
+                  <button 
+                    onClick={() => deleteTransaction(t._id || t.id)}
+                    className="text-gray-300 hover:text-red-500 transition-colors p-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </td>
               </tr>
             ))}
