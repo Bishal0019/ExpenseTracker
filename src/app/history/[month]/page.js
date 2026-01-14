@@ -65,7 +65,7 @@ export default function MonthDetailPage({ params }) {
                     <td className="p-4 text-sm text-gray-500">{t.date}</td>
                     <td className="p-4 font-medium text-gray-800">{t.description}</td>
                     <td className={`p-4 text-right font-bold ${t.type === 'expense' ? 'text-red-500' : 'text-green-500'}`}>
-                      {t.type === 'expense' ? '-' : '+'} ${t.amount.toLocaleString()}
+                      {t.type === 'expense' ? '-' : '+'} ₹{t.amount.toLocaleString()}
                     </td>
                   </tr>
                 ))}
