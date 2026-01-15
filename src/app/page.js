@@ -16,18 +16,19 @@ export default function Home() {
     return local.toISOString().split("T")[0];
   };
 
-
   const [currentSystemMonth, setCurrentSystemMonth] = useState(getCurrentMonthStr());
   const [initialBalance, setInitialBalance] = useState('0');
   const [transactions, setTransactions] = useState([]);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('expense');
-  const [date, setDate] = useState(getTodayStr()); 
+  const [date, setDate] = useState(getTodayStr()); // ✅ always today by default
 
+  // ✅ Freeze states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
+  // ✅ Fetch transactions safely (always fresh)
   const fetchTransactions = async () => {
     try {
       const tRes = await fetch('/api/transactions', { cache: "no-store" });
@@ -37,7 +38,6 @@ export default function Home() {
       console.error("Error fetching transactions:", err);
     }
   };
-
   const fetchSummary = async (month) => {
     try {
       const sRes = await fetch(`/api/summary?month=${month}`, { cache: "no-store" });
@@ -65,13 +65,11 @@ export default function Home() {
         fetchTransactions(),
         fetchSummary(month),
       ]);
-
       setDate(getTodayStr());
     };
 
     fetchData();
   }, [isSignedIn]);
-
   useEffect(() => {
     if (!isSignedIn) return;
 
@@ -79,12 +77,14 @@ export default function Home() {
       const nowMonth = getCurrentMonthStr();
       if (nowMonth !== currentSystemMonth) {
         setCurrentSystemMonth(nowMonth);
-
+        // ✅ Reset UI state
         setTransactions([]);
         setInitialBalance('0');
 
+        // ✅ Reset date to today
         setDate(getTodayStr());
 
+        // ✅ refetch from DB for new month
         await Promise.all([
           fetchTransactions(),
           fetchSummary(nowMonth),
@@ -97,7 +97,6 @@ export default function Home() {
 
   const handleBalanceChange = async (e) => {
     const rawValue = e.target.value;
-
     setInitialBalance(rawValue);
 
     const numericVal = Number(rawValue);
@@ -140,19 +139,18 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newEntry),
       });
-
       if (!res.ok) {
         console.error("Failed to add transaction:", await res.text());
         return;
       }
-
+      // ✅ Always re-fetch after add
       await fetchTransactions();
       await fetchSummary(currentSystemMonth);
 
+      // ✅ Reset fields
       setDescription('');
       setAmount('');
       setType('expense');
-
       setDate(getTodayStr());
 
     } catch (err) {
@@ -177,6 +175,7 @@ export default function Home() {
         return;
       }
 
+      // ✅ refresh properly after delete
       await fetchTransactions();
       await fetchSummary(currentSystemMonth);
 
@@ -187,6 +186,7 @@ export default function Home() {
     }
   };
 
+  // --- CALCULATIONS ---
   const monthlyTransactions = transactions.filter(t => t.date?.startsWith(currentSystemMonth));
 
   const totalExpenses = monthlyTransactions

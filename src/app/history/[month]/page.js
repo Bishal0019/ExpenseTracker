@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function MonthDetailPage({ params }) {
   // Use 'use' hook to unwrap the params object (Standard for Next.js 15)
@@ -9,6 +11,9 @@ export default function MonthDetailPage({ params }) {
 
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // ✅ Freeze state for PDF button
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const fetchMonthData = async () => {
@@ -36,6 +41,91 @@ export default function MonthDetailPage({ params }) {
     ? new Date(month + "-02").toLocaleString('default', { month: 'long', year: 'numeric' })
     : "Loading...";
 
+  // ✅ PDF Download Handler
+  const handleDownloadPDF = async () => {
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+
+    try {
+      const doc = new jsPDF();
+
+      // ----- HEADER -----
+      // Expense (black)
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(24);
+      doc.setTextColor(17, 24, 39); // gray-900 like black
+      doc.text("Expense", 14, 18);
+
+      // Tracker (amber-500)
+      const expenseWidth = doc.getTextWidth("Expense");
+      doc.setTextColor(245, 158, 11); // amber-500
+      doc.text("Tracker", 14 + expenseWidth + 2, 18);
+
+      // Subheading
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.setTextColor(107, 114, 128); // gray-500
+      doc.text(`Your transactions in ${displayTitle}`, 14, 28);
+
+      // Divider line
+      doc.setDrawColor(229, 231, 235); // gray-200
+      doc.line(14, 32, 196, 32);
+
+      // ----- TABLE DATA -----
+      const rows = transactions.map((t) => [
+        t.date || "-",
+        t.description || "-",
+        t.type === "expense" ? "Expense" : "Credit",
+        `${t.type === "expense" ? "-" : "+"} ₹${Number(t.amount || 0).toLocaleString()}`,
+      ]);
+
+      autoTable(doc, {
+        startY: 38,
+        head: [["Date", "Description", "Type", "Amount"]],
+        body: rows,
+        styles: {
+          font: "helvetica",
+          fontSize: 10,
+          textColor: [55, 65, 81], // gray-700
+          cellPadding: 4,
+        },
+        headStyles: {
+          fillColor: [249, 250, 251], // gray-50
+          textColor: [55, 65, 81],
+          fontStyle: "bold",
+        },
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: 80 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 35, halign: "right" },
+        },
+        didParseCell: function (data) {
+          // Color expenses red and credits green in Amount column
+          if (data.section === "body" && data.column.index === 3) {
+            const rowIndex = data.row.index;
+            const tx = transactions[rowIndex];
+
+            if (tx?.type === "expense") {
+              data.cell.styles.textColor = [239, 68, 68]; // red-500
+            } else {
+              data.cell.styles.textColor = [34, 197, 94]; // green-500
+            }
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+      });
+
+      // Save file
+      doc.save(`ExpenseTracker_${month}.pdf`);
+    } catch (err) {
+      console.error("PDF generation error:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8 overflow-x-hidden">
       <div className="max-w-4xl mx-auto">
@@ -47,13 +137,32 @@ export default function MonthDetailPage({ params }) {
         </Link>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Header */}
           <div className="p-5 sm:p-6 md:p-8 bg-white border-b border-gray-100">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 break-words">
-              {displayTitle}
-            </h1>
-            <p className="text-gray-500">Transaction Breakdown</p>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 break-words">
+                  {displayTitle}
+                </h1>
+                <p className="text-gray-500">Transaction Breakdown</p>
+              </div>
+
+              {/* ✅ Download PDF Button */}
+              <button
+                onClick={handleDownloadPDF}
+                disabled={loading || isDownloading || transactions.length === 0}
+                className={`bg-amber-500 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-amber-100 transition-all w-full sm:w-auto ${
+                  loading || isDownloading || transactions.length === 0
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-amber-600 active:scale-95'
+                }`}
+              >
+                {isDownloading ? "Preparing PDF..." : "Download PDF"}
+              </button>
+            </div>
           </div>
 
+          {/* Body */}
           {loading ? (
             <div className="p-16 sm:p-20 text-center text-amber-500 font-medium">
               Loading transactions...
