@@ -38,10 +38,9 @@ export default function MonthDetailPage({ params }) {
     ? new Date(month + "-02").toLocaleString('default', { month: 'long', year: 'numeric' })
     : "Loading...";
 
-  // ✅ Make amount PDF-safe + consistent width
+  // ✅ fixed number style (NO commas)
   const formatAmountForPDF = (amount = 0) => {
     const num = Number(amount || 0);
-    // fixed 2 decimals and NO commas (avoid weird spacing)
     return num.toFixed(2);
   };
 
@@ -76,11 +75,12 @@ export default function MonthDetailPage({ params }) {
         const sign = t.type === "expense" ? "-" : "+";
         const amt = formatAmountForPDF(t.amount);
 
+        // ✅ Keep amount clean and consistent
         return [
           t.date || "-",
           t.description || "-",
           t.type === "expense" ? "Expense" : "Credit",
-          `${sign} ₹${amt}`, // ✅ consistent formatting
+          `${sign} ₹${amt}`,
         ];
       });
 
@@ -88,17 +88,21 @@ export default function MonthDetailPage({ params }) {
         startY: 38,
         head: [["Date", "Description", "Type", "Amount"]],
         body: rows,
+
         styles: {
           font: "helvetica",
           fontSize: 10,
           textColor: [55, 65, 81],
           cellPadding: 4,
+          valign: "middle",
         },
+
         headStyles: {
           fillColor: [249, 250, 251],
           textColor: [55, 65, 81],
           fontStyle: "bold",
         },
+
         columnStyles: {
           0: { cellWidth: 28 },
           1: { cellWidth: 80 },
@@ -106,14 +110,13 @@ export default function MonthDetailPage({ params }) {
           3: { cellWidth: 35, halign: "right" },
         },
 
-        // ✅ Fix amount weird sizing + gaps by forcing monospace on Amount column
+        // ✅ Make the amount ALWAYS bold & colored (no courier)
         didParseCell: function (data) {
           if (data.section === "body" && data.column.index === 3) {
             const rowIndex = data.row.index;
             const tx = transactions[rowIndex];
 
-            // ✅ Make digits perfectly aligned (fixed width)
-            data.cell.styles.font = "courier";
+            data.cell.styles.font = "helvetica";
             data.cell.styles.fontStyle = "bold";
 
             if (tx?.type === "expense") {
