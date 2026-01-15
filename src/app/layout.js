@@ -15,9 +15,19 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "ExpenseTracker | Personal Finance Manager",
-  description: "Track your monthly expenses, manage your starting balance, and view your financial history with ease and security.",
+  description:
+    "Track your monthly expenses, manage your starting balance, and view your financial history with ease and security.",
   keywords: ["expense tracker", "finance manager", "budgeting tool", "monthly expenses"],
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
+
 
 export default function RootLayout({ children }) {
   return (
