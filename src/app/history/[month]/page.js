@@ -5,14 +5,12 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function MonthDetailPage({ params }) {
-  // Use 'use' hook to unwrap the params object (Standard for Next.js 15)
   const resolvedParams = use(params);
-  const month = resolvedParams.month; // This MUST match the folder name [month]
+  const month = resolvedParams.month;
 
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Freeze state for PDF button
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
@@ -36,12 +34,17 @@ export default function MonthDetailPage({ params }) {
     if (month) fetchMonthData();
   }, [month]);
 
-  // UI Helper: Converts "2026-01" to "January 2026"
   const displayTitle = month
     ? new Date(month + "-02").toLocaleString('default', { month: 'long', year: 'numeric' })
     : "Loading...";
 
-  // ✅ PDF Download Handler
+  // ✅ Make amount PDF-safe + consistent width
+  const formatAmountForPDF = (amount = 0) => {
+    const num = Number(amount || 0);
+    // fixed 2 decimals and NO commas (avoid weird spacing)
+    return num.toFixed(2);
+  };
+
   const handleDownloadPDF = async () => {
     if (isDownloading) return;
 
@@ -51,34 +54,35 @@ export default function MonthDetailPage({ params }) {
       const doc = new jsPDF();
 
       // ----- HEADER -----
-      // Expense (black)
       doc.setFont("helvetica", "bold");
       doc.setFontSize(24);
-      doc.setTextColor(17, 24, 39); // gray-900 like black
+      doc.setTextColor(17, 24, 39);
       doc.text("Expense", 14, 18);
 
-      // Tracker (amber-500)
       const expenseWidth = doc.getTextWidth("Expense");
-      doc.setTextColor(245, 158, 11); // amber-500
+      doc.setTextColor(245, 158, 11);
       doc.text("Tracker", 14 + expenseWidth + 2, 18);
 
-      // Subheading
       doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
-      doc.setTextColor(107, 114, 128); // gray-500
+      doc.setTextColor(107, 114, 128);
       doc.text(`Your transactions in ${displayTitle}`, 14, 28);
 
-      // Divider line
-      doc.setDrawColor(229, 231, 235); // gray-200
+      doc.setDrawColor(229, 231, 235);
       doc.line(14, 32, 196, 32);
 
       // ----- TABLE DATA -----
-      const rows = transactions.map((t) => [
-        t.date || "-",
-        t.description || "-",
-        t.type === "expense" ? "Expense" : "Credit",
-        `${t.type === "expense" ? "-" : "+"} ₹${Number(t.amount || 0).toLocaleString()}`,
-      ]);
+      const rows = transactions.map((t) => {
+        const sign = t.type === "expense" ? "-" : "+";
+        const amt = formatAmountForPDF(t.amount);
+
+        return [
+          t.date || "-",
+          t.description || "-",
+          t.type === "expense" ? "Expense" : "Credit",
+          `${sign} ₹${amt}`, // ✅ consistent formatting
+        ];
+      });
 
       autoTable(doc, {
         startY: 38,
@@ -87,11 +91,11 @@ export default function MonthDetailPage({ params }) {
         styles: {
           font: "helvetica",
           fontSize: 10,
-          textColor: [55, 65, 81], // gray-700
+          textColor: [55, 65, 81],
           cellPadding: 4,
         },
         headStyles: {
-          fillColor: [249, 250, 251], // gray-50
+          fillColor: [249, 250, 251],
           textColor: [55, 65, 81],
           fontStyle: "bold",
         },
@@ -101,23 +105,26 @@ export default function MonthDetailPage({ params }) {
           2: { cellWidth: 25 },
           3: { cellWidth: 35, halign: "right" },
         },
+
+        // ✅ Fix amount weird sizing + gaps by forcing monospace on Amount column
         didParseCell: function (data) {
-          // Color expenses red and credits green in Amount column
           if (data.section === "body" && data.column.index === 3) {
             const rowIndex = data.row.index;
             const tx = transactions[rowIndex];
 
-            if (tx?.type === "expense") {
-              data.cell.styles.textColor = [239, 68, 68]; // red-500
-            } else {
-              data.cell.styles.textColor = [34, 197, 94]; // green-500
-            }
+            // ✅ Make digits perfectly aligned (fixed width)
+            data.cell.styles.font = "courier";
             data.cell.styles.fontStyle = "bold";
+
+            if (tx?.type === "expense") {
+              data.cell.styles.textColor = [239, 68, 68];
+            } else {
+              data.cell.styles.textColor = [34, 197, 94];
+            }
           }
         },
       });
 
-      // Save file
       doc.save(`ExpenseTracker_${month}.pdf`);
     } catch (err) {
       console.error("PDF generation error:", err);
