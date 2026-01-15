@@ -38,15 +38,13 @@ export default function MonthDetailPage({ params }) {
     ? new Date(month + "-02").toLocaleString('default', { month: 'long', year: 'numeric' })
     : "Loading...";
 
-  // ✅ fixed number style (NO commas)
   const formatAmountForPDF = (amount = 0) => {
     const num = Number(amount || 0);
-    return num.toFixed(2);
+    return num.toFixed(2); // ✅ always fixed & consistent
   };
 
   const handleDownloadPDF = async () => {
     if (isDownloading) return;
-
     setIsDownloading(true);
 
     try {
@@ -75,12 +73,12 @@ export default function MonthDetailPage({ params }) {
         const sign = t.type === "expense" ? "-" : "+";
         const amt = formatAmountForPDF(t.amount);
 
-        // ✅ Keep amount clean and consistent
+        // ✅ IMPORTANT: use INR (₹ breaks in default jsPDF fonts)
         return [
           t.date || "-",
           t.description || "-",
           t.type === "expense" ? "Expense" : "Credit",
-          `${sign} ₹${amt}`,
+          `${sign} INR ${amt}`,
         ];
       });
 
@@ -95,6 +93,7 @@ export default function MonthDetailPage({ params }) {
           textColor: [55, 65, 81],
           cellPadding: 4,
           valign: "middle",
+          overflow: "linebreak",
         },
 
         headStyles: {
@@ -103,20 +102,20 @@ export default function MonthDetailPage({ params }) {
           fontStyle: "bold",
         },
 
+        // ✅ Give amount more space so it never goes outside
         columnStyles: {
-          0: { cellWidth: 28 },
-          1: { cellWidth: 80 },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 35, halign: "right" },
+          0: { cellWidth: 30 },   // Date
+          1: { cellWidth: 75 },   // Description (slightly smaller)
+          2: { cellWidth: 25 },   // Type
+          3: { cellWidth: 45, halign: "right" }, // Amount (bigger)
         },
 
-        // ✅ Make the amount ALWAYS bold & colored (no courier)
         didParseCell: function (data) {
+          // ✅ Color expenses red & credits green only in Amount column
           if (data.section === "body" && data.column.index === 3) {
             const rowIndex = data.row.index;
             const tx = transactions[rowIndex];
 
-            data.cell.styles.font = "helvetica";
             data.cell.styles.fontStyle = "bold";
 
             if (tx?.type === "expense") {
