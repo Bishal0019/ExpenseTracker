@@ -13,12 +13,13 @@ export default function MonthDetailPage({ params }) {
   useEffect(() => {
     const fetchMonthData = async () => {
       try {
-        const res = await fetch('/api/transactions');
+        const res = await fetch('/api/transactions', { cache: "no-store" });
         const data = await res.json();
-        
-        // Filter transactions where the date string (YYYY-MM-DD) 
-        // starts with our month string (YYYY-MM)
-        const filtered = data.filter(t => t.date.startsWith(month));
+
+        const filtered = Array.isArray(data)
+          ? data.filter(t => t.date?.startsWith(month))
+          : [];
+
         setTransactions(filtered);
       } catch (err) {
         console.error("Error loading month details:", err);
@@ -31,50 +32,70 @@ export default function MonthDetailPage({ params }) {
   }, [month]);
 
   // UI Helper: Converts "2026-01" to "January 2026"
-  const displayTitle = month 
+  const displayTitle = month
     ? new Date(month + "-02").toLocaleString('default', { month: 'long', year: 'numeric' })
     : "Loading...";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8 overflow-x-hidden">
       <div className="max-w-4xl mx-auto">
-        <Link href="/history" className="text-amber-600 hover:underline mb-6 inline-block font-medium">
+        <Link
+          href="/history"
+          className="text-amber-600 hover:underline mb-6 inline-block font-medium"
+        >
           ← Back to All History
         </Link>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-8 bg-white border-b border-gray-100">
-            <h1 className="text-3xl font-bold text-gray-800">{displayTitle}</h1>
+          <div className="p-5 sm:p-6 md:p-8 bg-white border-b border-gray-100">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 break-words">
+              {displayTitle}
+            </h1>
             <p className="text-gray-500">Transaction Breakdown</p>
           </div>
 
           {loading ? (
-            <div className="p-20 text-center text-amber-500 font-medium">Loading transactions...</div>
+            <div className="p-16 sm:p-20 text-center text-amber-500 font-medium">
+              Loading transactions...
+            </div>
           ) : (
-            <table className="w-full text-left">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="p-4 text-gray-600 font-semibold">Date</th>
-                  <th className="p-4 text-gray-600 font-semibold">Description</th>
-                  <th className="p-4 text-right text-gray-600 font-semibold">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((t) => (
-                  <tr key={t._id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="p-4 text-sm text-gray-500">{t.date}</td>
-                    <td className="p-4 font-medium text-gray-800">{t.description}</td>
-                    <td className={`p-4 text-right font-bold ${t.type === 'expense' ? 'text-red-500' : 'text-green-500'}`}>
-                      {t.type === 'expense' ? '-' : '+'} ₹{t.amount.toLocaleString()}
-                    </td>
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left min-w-[520px]">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-4 text-gray-600 font-semibold whitespace-nowrap">Date</th>
+                    <th className="p-4 text-gray-600 font-semibold">Description</th>
+                    <th className="p-4 text-right text-gray-600 font-semibold whitespace-nowrap">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {transactions.map((t) => (
+                    <tr
+                      key={t._id}
+                      className="border-t border-gray-100 hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="p-4 text-sm text-gray-500 whitespace-nowrap">
+                        {t.date}
+                      </td>
+                      <td className="p-4 font-medium text-gray-800 break-words">
+                        {t.description}
+                      </td>
+                      <td
+                        className={`p-4 text-right font-bold whitespace-nowrap ${
+                          t.type === 'expense' ? 'text-red-500' : 'text-green-500'
+                        }`}
+                      >
+                        {t.type === 'expense' ? '-' : '+'} ₹{Number(t.amount || 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {!loading && transactions.length === 0 && (
-            <div className="p-20 text-center text-gray-400 italic">
+            <div className="p-16 sm:p-20 text-center text-gray-400 italic">
               No transactions found for this month.
             </div>
           )}
